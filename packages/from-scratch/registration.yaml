@@ -1,0 +1,16 @@
+id: from-scratch
+hs_token: hs_token
+as_token: from_scratch_token
+url: http://from-scratch:33333
+sender_localpart: fromscratchbot
+rate_limited: false
+namespaces:
+  users:
+    - exclusive: true
+      regex: '^@fromscratch_.+:dulguuno.matrix.host$'
+    - exclusive: true
+      regex: '^@fromscratchbot:dulguuno.matrix.host$'
+  aliases:
+    - exclusive: true
+      regex: '^#fromscratch_.+:dulguuno.matrix.host$'
+  rooms: []

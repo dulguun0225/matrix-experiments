@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  synapse-generate:
+    container_name: synapse-generate
+    image: matrixdotorg/synapse:latest
+    volumes:
+      - ./synapse-data:/data
+    ports:
+      - 8008:8008
+    environment:
+      SYNAPSE_SERVER_NAME: dulguuno.matrix.host
+      SYNAPSE_REPORT_STATS: "no"
+    command: generate

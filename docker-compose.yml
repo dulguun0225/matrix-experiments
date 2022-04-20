@@ -1,0 +1,50 @@
+version: "3.8"
+
+secrets:
+  # mautrix-instagram-registration.yml:
+  #   file: ./mautrix-instagram/registration.yaml
+  from-scratch-registration.yaml:
+    file: ./packages/from-scratch/registration.yaml
+
+volumes:
+  pg-data:
+
+services:
+  synapse:
+    depends_on:
+      - postgres
+    container_name: synapse
+    image: matrixdotorg/synapse:latest
+    secrets:
+      - from-scratch-registration.yaml 
+    volumes:
+      - ./synapse-data:/data
+    ports:
+      - 8008:8008
+    # logging:
+    #   driver: none
+  from-scratch:
+    container_name: from-scratch
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./:/app
+    command: yarn workspace from-scratch dev
+  postgres:
+    container_name: postgres
+    image: postgres
+    restart: unless-stopped
+    # ports:
+    #   - 5432:5432
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: synapse
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+  adminer:
+    image: adminer
+    restart: unless-stopped 
+    ports:
+      - 8080:8080
