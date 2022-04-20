@@ -1,8 +1,8 @@
 version: "3.8"
 
 secrets:
-  # mautrix-instagram-registration.yml:
-  #   file: ./mautrix-instagram/registration.yaml
+  mautrix-facebook-registration.yml:
+    file: ./mautrix-facebook/registration.yaml
   from-scratch-registration.yaml:
     file: ./packages/from-scratch/registration.yaml
 
@@ -17,12 +17,21 @@ services:
     image: matrixdotorg/synapse:latest
     secrets:
       - from-scratch-registration.yaml 
+      - mautrix-facebook-registration.yml
     volumes:
       - ./synapse-data:/data
     ports:
       - 8008:8008
-    # logging:
-    #   driver: none
+    logging:
+      driver: none
+  # mautrix-facebook:
+  #   container_name: mautrix-facebook
+  #   depends_on:
+  #     - synapse
+  #   image: dock.mau.dev/mautrix/facebook:latest
+  #   restart: unless-stopped
+  #   volumes:
+  #   - ./mautrix-facebook:/data
   from-scratch:
     container_name: from-scratch
     build:

@@ -1,0 +1,13 @@
+id: facebook
+as_token: c-WawguG-rU6hSXqGFvzJSwTsFiDjz12twE7p1gyjN4JYID8r5-4ubQCDWl4xhYN
+hs_token: 1rvHN0PL5HzDdqCsQAzA93w7PxqdF3TAbCe9XiMDk0V3ryvRo4nF6NJbRl55NUYj
+namespaces:
+    users:
+    - exclusive: true
+      regex: '@facebook_.*:dulguuno\.matrix\.host'
+    - exclusive: true
+      regex: '@facebookbot:dulguuno\.matrix\.host'
+    aliases: []
+url: http://mautrix-facebook:29319
+sender_localpart: LmjJ3IzPC8-DW3ocn3qUayPX-i8kIrFcxmN3OB6rZQy4Qsjt5R8CllwcX9jWK47r
+rate_limited: false
