@@ -38,8 +38,10 @@ appservice.on("room.message", (roomId, event) => {
   // user said.
   // const intent = appservice.getIntentForSuffix(event["event_id"].toLowerCase().replace(/[^a-z0-9]/g, '_'));
 
+  console.log(JSON.stringify(event, null, 2));
 
-  const intent = appservice.getIntentForUserId("fbpbridge_bot");
+
+  const intent = appservice.getIntentForUserId("@fbpbridge_bot:dulguuno.matrix.host");
 
   intent.sendText(roomId, body, "m.notice");
 });
@@ -87,6 +89,10 @@ appservice.on("room.join", (roomId, joinEvent) => {
 appservice.on("room.leave", (roomId, leaveEvent) => {
   console.log(`Left ${roomId} as ${leaveEvent["state_key"]}`);
 });
+
+appservice.expressAppInstance.get("/facebook/webhook", (req, res) => {
+  res.json({ works: " works"});
+})
 
 async function main() {
   await appservice.begin();

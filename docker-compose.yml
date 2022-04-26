@@ -19,8 +19,8 @@ services:
       - ./synapse-data:/data
     ports:
       - 8008:8008
-    # logging:
-    #   driver: none
+    logging:
+      driver: none
   # mautrix-facebook:
   #   container_name: mautrix-facebook
   #   depends_on:
@@ -41,6 +41,8 @@ services:
     container_name: fbpbridge
     depends_on:
       - synapse
+    ports:
+      - 44444:44444
     build:
       context: ./
       dockerfile: ./Dockerfile
