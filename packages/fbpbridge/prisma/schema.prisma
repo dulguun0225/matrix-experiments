@@ -12,5 +12,5 @@ datasource db {
 
 model RoomFBID {
   roomId String @id
-  fbid   Int    @unique
+  fbid   String @unique
 }

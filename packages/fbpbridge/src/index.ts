@@ -8,13 +8,20 @@ import {
   SimpleRetryJoinStrategy,
 } from "matrix-bot-sdk";
 import registration from "./registration";
-import axios from 'axios';
-import * as AxiosLogger from 'axios-logger';
-import dotenv from 'dotenv';
+import axios from "axios";
+import * as AxiosLogger from "axios-logger";
+import dotenv from "dotenv";
 dotenv.config();
+
+import initFacebook from "./init-facebook";
+
+import { PrismaClient, RoomFBID } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // @ts-ignore
 axios.interceptors.request.use(AxiosLogger.requestLogger);
+
 
 console.log("Setting up appservice with in-memory storage");
 
@@ -22,12 +29,6 @@ const storage = new MemoryStorageProvider();
 
 const PORT = 44444;
 
-const roomPuppets: { [x: string]: string } = {
-  "!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host":
-    "@fbpbridge_fb0:dulguuno.matrix.host",
-};
-
-const erxesWebhookUser = "@dulguuno:dulguuno.matrix.host";
 
 const options: IAppserviceOptions = {
   bindAddress: "0.0.0.0",
@@ -47,31 +48,6 @@ appservice.on("room.event", (roomId, event) => {
   console.log(
     `Received event ${event["event_id"]} (${event["type"]}) from ${event["sender"]} in ${roomId}`
   );
-});
-
-appservice.on("room.message", async (roomId, event) => {
-  if (!event["content"]) return;
-  if (event["content"]["msgtype"] !== "m.text") return;
-
-  if(event.sender === erxesWebhookUser) {
-    sendMessage(event.content.body);
-  }
-
-  console.log(JSON.stringify(event, null, 2));
-
-  // We'll create fake ghosts based on the event ID. Typically these users would be mapped
-  // by some other means and not arbitrarily. The ghost here also echos whatever the original
-  // user said.
-  // const intent = appservice.getIntentForSuffix(event["event_id"].toLowerCase().replace(/[^a-z0-9]/g, '_'));
-
-  // console.log(JSON.stringify(event, null, 2));
-
-  // const arr = await appservice.botClient.getJoinedRoomMembers(roomId);
-  // console.log(JSON.stringify(arr, null, 2));
-
-  // const intent = appservice.getIntentForUserId("@fbpbridge_bot:dulguuno.matrix.host");
-
-  // intent.sendText(roomId, body, "m.notice");
 });
 
 appservice.on("query.user", (userId, createUser) => {
@@ -111,7 +87,6 @@ appservice.on("query.room", (roomAlias, createRoom) => {
 appservice.on("room.invite", (roomId, inviteEvent) => {
   const userId = inviteEvent["state_key"];
   console.log(`Received invite for ${inviteEvent["state_key"]} to ${roomId}`);
-
   const intent = appservice.getIntentForUserId(userId);
   intent.joinRoom(roomId);
 });
@@ -124,103 +99,10 @@ appservice.on("room.leave", (roomId, leaveEvent) => {
   console.log(`Left ${roomId} as ${leaveEvent["state_key"]}`);
 });
 
-async function inviteUser() {
-  const fbid = "fb0";
-  const fbMatrixUserId = `@fbpbridge_${fbid}:dulguuno.matrix.host`;
-  const intent = appservice.getIntentForUserId(fbMatrixUserId);
-  await intent.ensureRegistered();
-
-  const roomId = await intent.underlyingClient.createRoom({
-    invite: [erxesWebhookUser],
-    name: new Date().toISOString() + fbMatrixUserId,
-    is_direct: true,
-    preset: "private_chat",
-  });
-
-  roomPuppets[roomId] = fbMatrixUserId;
-
-  console.log(`created room: ${roomId}`);
-}
 
 // initFacebookHook(appservice);
 
-// Adds support for GET requests to our webhook
-appservice.expressAppInstance.get("/facebook/webhook", (req, res) => {
-  // Your verify token. Should be a random string.
-  let VERIFY_TOKEN = "VERIFY_TOKEN";
-
-  // Parse the query params
-  let mode = req.query["hub.mode"];
-  let token = req.query["hub.verify_token"];
-  let challenge = req.query["hub.challenge"];
-
-  // Checks if a token and mode is in the query string of the request
-  if (mode && token) {
-    // Checks the mode and token sent is correct
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      // Responds with the challenge token from the request
-      console.log("WEBHOOK_VERIFIED");
-      res.status(200).send(challenge);
-    } else {
-      // Responds with '403 Forbidden' if verify tokens do not match
-      res.sendStatus(403);
-    }
-  }
-});
-
-appservice.expressAppInstance.post("/facebook/webhook", async (req, res) => {
-  let body = req.body;
-
-  // Checks this is an event from a page subscription
-  if (body.object === "page") {
-    // console.log(JSON.stringify(body, null, 2));
-    // Iterates over each entry - there may be multiple if batched
-    body.entry.forEach(function (entry: any) {
-      // Gets the message. entry.messaging is an array, but
-      // will only ever contain one message, so we get index 0
-      let webhook_event = entry.messaging[0];
-      console.log(webhook_event);
-
-      // handleMessage(webhook_event.sender.id, webhook_event.message);
-
-      const intent = appservice.getIntentForUserId(
-        "@fbpbridge_fb0:dulguuno.matrix.host"
-      );
-      intent.sendText(
-        "!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host",
-        webhook_event.message.text,
-        "m.text"
-      );
-    });
-
-    // Returns a '200 OK' response to all requests
-    res.status(200).send("EVENT_RECEIVED");
-  } else {
-    // Returns a '404 Not Found' if event is not from a page subscription
-    res.sendStatus(404);
-  }
-});
-
-const senderPsid = "4747951328667401";
-
-const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
-
-async function sendMessage(text: String) {
-  const response = {
-    recipient: {
-      id: senderPsid,
-    },
-    message: {
-      text,
-    },
-  };
-  
-  try {
-    axios.post(`https://graph.facebook.com/v13.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
-  } catch (e) {
-    console.error(e);
-  }
-}
+initFacebook(appservice);
 
 async function main() {
   await appservice.begin();
