@@ -1,0 +1,16 @@
+id: fbpbridge
+hs_token: hs_token
+as_token: fbpbridge_token
+url: http://fbpbridge:44444
+sender_localpart: fbpbridgebot
+rate_limited: false
+namespaces:
+  users:
+    - exclusive: true
+      regex: '^@fbpbridge_.+:dulguuno.matrix.host$'
+    - exclusive: true
+      regex: '^@fbpbridge:dulguuno.matrix.host$'
+  aliases:
+    - exclusive: true
+      regex: '^#fbpbridge_.+:dulguuno.matrix.host$'
+  rooms: []
