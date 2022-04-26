@@ -1,7 +1,18 @@
-import { Appservice, AppserviceJoinRoomStrategy, AutojoinRoomsMixin, IAppserviceOptions, IAppserviceRegistration, MemoryStorageProvider, SimpleRetryJoinStrategy } from 'matrix-bot-sdk';
-import registration from './registration';
-import facebookHook from './facebook-hook';
-import initFacebookHook from './facebook-hook';
+import {
+  Appservice,
+  AppserviceJoinRoomStrategy,
+  AutojoinRoomsMixin,
+  IAppserviceOptions,
+  IAppserviceRegistration,
+  MemoryStorageProvider,
+  SimpleRetryJoinStrategy,
+} from "matrix-bot-sdk";
+import registration from "./registration";
+import axios from 'axios';
+import * as AxiosLogger from 'axios-logger';
+
+// @ts-ignore
+axios.interceptors.request.use(AxiosLogger.requestLogger);
 
 console.log("Setting up appservice with in-memory storage");
 
@@ -9,7 +20,10 @@ const storage = new MemoryStorageProvider();
 
 const PORT = 44444;
 
-const roomPuppets: { [x: string]: string } = { "!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host" : "@fbpbridge_fb0:dulguuno.matrix.host"};
+const roomPuppets: { [x: string]: string } = {
+  "!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host":
+    "@fbpbridge_fb0:dulguuno.matrix.host",
+};
 
 const erxesWebhookUser = "@dulguuno:dulguuno.matrix.host";
 
@@ -28,24 +42,20 @@ const appservice = new Appservice(options);
 AutojoinRoomsMixin.setupOnAppservice(appservice);
 
 appservice.on("room.event", (roomId, event) => {
-  console.log(`Received event ${event["event_id"]} (${event["type"]}) from ${event["sender"]} in ${roomId}`);
+  console.log(
+    `Received event ${event["event_id"]} (${event["type"]}) from ${event["sender"]} in ${roomId}`
+  );
 });
 
 appservice.on("room.message", async (roomId, event) => {
   if (!event["content"]) return;
   if (event["content"]["msgtype"] !== "m.text") return;
 
-  if (appservice.isNamespacedUser(event.sender)) return;
+  if(event.sender === erxesWebhookUser) {
+    sendMessage(event.content.body);
+  }
 
-  const body = event["content"]["body"];
-  console.log(`Received message ${event["event_id"]} from ${event["sender"]} in ${roomId}: ${body}`);
-
-  console.log("roomPuppet="+roomPuppets[roomId]);
-
-  const intent = appservice.getIntentForUserId(roomPuppets[roomId]);
-
-  intent.sendText(roomId, body, "m.text");
-
+  console.log(JSON.stringify(event, null, 2));
 
   // We'll create fake ghosts based on the event ID. Typically these users would be mapped
   // by some other means and not arbitrarily. The ghost here also echos whatever the original
@@ -57,15 +67,10 @@ appservice.on("room.message", async (roomId, event) => {
   // const arr = await appservice.botClient.getJoinedRoomMembers(roomId);
   // console.log(JSON.stringify(arr, null, 2));
 
-
   // const intent = appservice.getIntentForUserId("@fbpbridge_bot:dulguuno.matrix.host");
-
-  
 
   // intent.sendText(roomId, body, "m.notice");
 });
-
-appservice.on("", () => {})
 
 appservice.on("query.user", (userId, createUser) => {
   // This is called when the homeserver queries a user's existence. At this point, a
@@ -127,7 +132,7 @@ async function inviteUser() {
     invite: [erxesWebhookUser],
     name: new Date().toISOString() + fbMatrixUserId,
     is_direct: true,
-    preset: "private_chat"
+    preset: "private_chat",
   });
 
   roomPuppets[roomId] = fbMatrixUserId;
@@ -174,8 +179,16 @@ appservice.expressAppInstance.post("/facebook/webhook", async (req, res) => {
       let webhook_event = entry.messaging[0];
       console.log(webhook_event);
 
-      const intent = appservice.getIntentForUserId("@fbpbridge_fb0:dulguuno.matrix.host");
-      intent.sendText("!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host", webhook_event.message.text, "m.text");
+      // handleMessage(webhook_event.sender.id, webhook_event.message);
+
+      const intent = appservice.getIntentForUserId(
+        "@fbpbridge_fb0:dulguuno.matrix.host"
+      );
+      intent.sendText(
+        "!EXuhdqxQwzaElfkVmO:dulguuno.matrix.host",
+        webhook_event.message.text,
+        "m.text"
+      );
     });
 
     // Returns a '200 OK' response to all requests
@@ -185,6 +198,44 @@ appservice.expressAppInstance.post("/facebook/webhook", async (req, res) => {
     res.sendStatus(404);
   }
 });
+
+const senderPsid = "4747951328667401";
+
+const FB_PAGE_ACCESS_TOKEN = "EAAgzVRbfn2QBAHu3rZBXwCVrqwkv29v9ugU6RvPzRLZAE62ciaC44HopD0PFB5q97jGhxZAvmTRHJUlBUMejDZBTGv5d8ZCt37OAx8KcrQUtEUl6yDG5PtlX27ZAaehZBO4W1249XsZCOHu3IoMGttsKGEiB5TZB8YcjZB0h6KZBnWNn6nEVsjUWZBIK"
+
+async function sendMessage(text: String) {
+  const response = {
+    recipient: {
+      id: senderPsid,
+    },
+    message: {
+      text,
+    },
+  };
+  
+  try {
+    axios.post(`https://graph.facebook.com/v2.6/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function handleMessage(senderPsid: any, receivedMessage: any) {
+  const response = {
+    recipient: {
+      id: senderPsid,
+    },
+    message: {
+      text: `You sent the message: '${receivedMessage.text}'. Now send me an attachment!`,
+    },
+  };
+  
+  try {
+    axios.post(`https://graph.facebook.com/v2.6/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 async function main() {
   await appservice.begin();
