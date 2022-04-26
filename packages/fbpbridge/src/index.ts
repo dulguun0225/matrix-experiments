@@ -1,4 +1,4 @@
-import { Appservice, AutojoinRoomsMixin, IAppserviceOptions, IAppserviceRegistration, MemoryStorageProvider, SimpleRetryJoinStrategy } from 'matrix-bot-sdk';
+import { Appservice, AppserviceJoinRoomStrategy, AutojoinRoomsMixin, IAppserviceOptions, IAppserviceRegistration, MemoryStorageProvider, SimpleRetryJoinStrategy } from 'matrix-bot-sdk';
 import { mainModule } from 'process';
 import registration from './registration';
 
@@ -6,7 +6,9 @@ console.log("Setting up appservice with in-memory storage");
 
 const storage = new MemoryStorageProvider();
 
-const PORT = 44444
+const PORT = 44444;
+
+const erxesWebhookUser = "@dulguuno:dulguuno.matrix.host";
 
 const options: IAppserviceOptions = {
   bindAddress: "0.0.0.0",
@@ -26,25 +28,36 @@ appservice.on("room.event", (roomId, event) => {
   console.log(`Received event ${event["event_id"]} (${event["type"]}) from ${event["sender"]} in ${roomId}`);
 });
 
-appservice.on("room.message", (roomId, event) => {
+appservice.on("room.message", async (roomId, event) => {
   if (!event["content"]) return;
   if (event["content"]["msgtype"] !== "m.text") return;
 
   const body = event["content"]["body"];
   console.log(`Received message ${event["event_id"]} from ${event["sender"]} in ${roomId}: ${body}`);
 
+
+  const members = await appservice.botClient.getRoomMembers(roomId);
+  console.log(members);
+
   // We'll create fake ghosts based on the event ID. Typically these users would be mapped
   // by some other means and not arbitrarily. The ghost here also echos whatever the original
   // user said.
   // const intent = appservice.getIntentForSuffix(event["event_id"].toLowerCase().replace(/[^a-z0-9]/g, '_'));
 
-  console.log(JSON.stringify(event, null, 2));
+  // console.log(JSON.stringify(event, null, 2));
+
+  // const arr = await appservice.botClient.getJoinedRoomMembers(roomId);
+  // console.log(JSON.stringify(arr, null, 2));
 
 
-  const intent = appservice.getIntentForUserId("@fbpbridge_bot:dulguuno.matrix.host");
+  // const intent = appservice.getIntentForUserId("@fbpbridge_bot:dulguuno.matrix.host");
 
-  intent.sendText(roomId, body, "m.notice");
+  
+
+  // intent.sendText(roomId, body, "m.notice");
 });
+
+appservice.on("", () => {})
 
 appservice.on("query.user", (userId, createUser) => {
   // This is called when the homeserver queries a user's existence. At this point, a
@@ -52,10 +65,11 @@ appservice.on("query.user", (userId, createUser) => {
   // form below to the createUser function (as shown). To prevent the creation of a user,
   // pass false to createUser, like so: createUser(false);
   console.log(`Received query for user ${userId}`);
-  createUser({
-      display_name: "Test User " + userId,
-      avatar_mxc: "mxc://localhost/somewhere",
-  });
+  createUser(false);
+  // createUser({
+  //     display_name: "Test User " + userId,
+  //     avatar_mxc: "mxc://localhost/somewhere",
+  // });
 });
 
 appservice.on("query.room", (roomAlias, createRoom) => {
@@ -66,20 +80,25 @@ appservice.on("query.room", (roomAlias, createRoom) => {
   // so: createRoom(false); The object (with minor modifications) will be passed to
   // the /createRoom API.
   console.log(`Received query for alias ${roomAlias}`);
-  createRoom({
-      name: "Hello World",
-      topic: "This is an example room",
-      invite: [appservice.botUserId],
-      visibility: "public",
-      preset: "public_chat",
-  });
+  createRoom(false);
+  // createRoom({
+  //     name: "Hello World",
+  //     topic: "This is an example room",
+  //     invite: [appservice.botUserId],
+  //     visibility: "public",
+  //     preset: "public_chat",
+  // });
 });
 
 // Note: The following 3 handlers only fire for appservice users! These will NOT be fired
 // for everyone.
 
 appservice.on("room.invite", (roomId, inviteEvent) => {
+  const userId = inviteEvent["state_key"];
   console.log(`Received invite for ${inviteEvent["state_key"]} to ${roomId}`);
+
+  const intent = appservice.getIntentForUserId(userId);
+  intent.joinRoom(roomId);
 });
 
 appservice.on("room.join", (roomId, joinEvent) => {
@@ -92,11 +111,30 @@ appservice.on("room.leave", (roomId, leaveEvent) => {
 
 appservice.expressAppInstance.get("/facebook/webhook", (req, res) => {
   res.json({ works: " works"});
-})
+});
+
+async function inviteUser() {
+  const fbid = "fb0";
+  const fbMatrixUserId = `@fbpbridge_${fbid}:dulguuno.matrix.host`;
+  const intent = appservice.getIntentForUserId(fbMatrixUserId);
+  await intent.ensureRegistered();
+
+  const roomId = await intent.underlyingClient.createRoom({
+    invite: [erxesWebhookUser],
+    name: new Date().toISOString() + fbMatrixUserId,
+    is_direct: true,
+    preset: "private_chat"
+  });
+
+  intent.underlyingClient.createRoomAlias(`#fbpbridge_${fbid}:dulguuno.matrix.host`, roomId);
+
+  console.log(`created room: ${roomId}`);
+}
 
 async function main() {
   await appservice.begin();
   console.log(`Appservice started on port ${PORT}`);
+  // await inviteUser();
 }
 
 main();

@@ -7,10 +7,8 @@ rate_limited: false
 namespaces:
   users:
     - exclusive: true
-      regex: '^@fbpbridge_.+:dulguuno.matrix.host$'
-    # - exclusive: true
-    #   regex: '^@fbpbridgebot:dulguuno.matrix.host$'
+      regex: '@fbpbridge_.*:dulguuno.matrix.host'
   aliases:
     - exclusive: true
-      regex: '^#fbpbridge_.+:dulguuno.matrix.host$'
+      regex: '^#fbpbridge_.*:dulguuno.matrix.host$'
   rooms: []
