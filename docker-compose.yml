@@ -1,10 +1,8 @@
 version: "3.8"
 
 secrets:
-  mautrix-facebook-registration.yml:
-    file: ./mautrix-facebook/registration.yaml
-  from-scratch-registration.yaml:
-    file: ./packages/from-scratch/registration.yaml
+  fbpbridge-registration.yaml:
+    file: ./packages/fbpbridge/registration.yaml
 
 volumes:
   pg-data:
@@ -16,8 +14,7 @@ services:
     container_name: synapse
     image: matrixdotorg/synapse:latest
     secrets:
-      - from-scratch-registration.yaml 
-      - mautrix-facebook-registration.yml
+      - fbpbridge-registration.yaml
     volumes:
       - ./synapse-data:/data
     ports:
@@ -32,14 +29,24 @@ services:
   #   restart: unless-stopped
   #   volumes:
   #   - ./mautrix-facebook:/data
-  from-scratch:
-    container_name: from-scratch
+  # from-scratch:
+  #   container_name: from-scratch
+  #   build:
+  #     context: ./
+  #     dockerfile: ./Dockerfile
+  #   volumes:
+  #     - ./:/app
+  #   command: yarn workspace from-scratch dev
+  fbpbridge:
+    container_name: fbpbridge
+    depends_on:
+      - synapse
     build:
       context: ./
       dockerfile: ./Dockerfile
     volumes:
       - ./:/app
-    command: yarn workspace from-scratch dev
+    command: yarn workspace fbpbridge dev
   postgres:
     container_name: postgres
     image: postgres

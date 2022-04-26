@@ -1549,8 +1549,9 @@ room_prejoin_state:
 # A list of application service config files to use
 #
 app_service_config_files:
-  - /run/secrets/from-scratch-registration.yaml
-  - /run/secrets/mautrix-facebook-registration.yml
+  - /run/secrets/fbpbridge-registration.yaml
+  # - /run/secrets/from-scratch-registration.yaml
+  # - /run/secrets/mautrix-facebook-registration.yml
 
 # Uncomment to enable tracking of application service IP addresses. Implicitly
 # enables MAU tracking for application service users.

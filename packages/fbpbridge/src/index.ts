@@ -1,4 +1,5 @@
 import { Appservice, AutojoinRoomsMixin, IAppserviceOptions, IAppserviceRegistration, MemoryStorageProvider, SimpleRetryJoinStrategy } from 'matrix-bot-sdk';
+import { mainModule } from 'process';
 import registration from './registration';
 
 console.log("Setting up appservice with in-memory storage");
@@ -35,7 +36,11 @@ appservice.on("room.message", (roomId, event) => {
   // We'll create fake ghosts based on the event ID. Typically these users would be mapped
   // by some other means and not arbitrarily. The ghost here also echos whatever the original
   // user said.
-  const intent = appservice.getIntentForSuffix(event["event_id"].toLowerCase().replace(/[^a-z0-9]/g, '_'));
+  // const intent = appservice.getIntentForSuffix(event["event_id"].toLowerCase().replace(/[^a-z0-9]/g, '_'));
+
+
+  const intent = appservice.getIntentForUserId("fbpbridge_bot");
+
   intent.sendText(roomId, body, "m.notice");
 });
 
@@ -83,4 +88,9 @@ appservice.on("room.leave", (roomId, leaveEvent) => {
   console.log(`Left ${roomId} as ${leaveEvent["state_key"]}`);
 });
 
-appservice.begin().then(() => console.log("Appservice started"));
+async function main() {
+  await appservice.begin();
+  console.log(`Appservice started on port ${PORT}`);
+}
+
+main();
