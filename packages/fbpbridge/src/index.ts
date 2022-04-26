@@ -10,6 +10,8 @@ import {
 import registration from "./registration";
 import axios from 'axios';
 import * as AxiosLogger from 'axios-logger';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // @ts-ignore
 axios.interceptors.request.use(AxiosLogger.requestLogger);
@@ -201,7 +203,7 @@ appservice.expressAppInstance.post("/facebook/webhook", async (req, res) => {
 
 const senderPsid = "4747951328667401";
 
-const FB_PAGE_ACCESS_TOKEN = "EAAgzVRbfn2QBAHu3rZBXwCVrqwkv29v9ugU6RvPzRLZAE62ciaC44HopD0PFB5q97jGhxZAvmTRHJUlBUMejDZBTGv5d8ZCt37OAx8KcrQUtEUl6yDG5PtlX27ZAaehZBO4W1249XsZCOHu3IoMGttsKGEiB5TZB8YcjZB0h6KZBnWNn6nEVsjUWZBIK"
+const FB_PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
 
 async function sendMessage(text: String) {
   const response = {
