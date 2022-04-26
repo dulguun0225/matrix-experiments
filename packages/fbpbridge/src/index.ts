@@ -216,24 +216,7 @@ async function sendMessage(text: String) {
   };
   
   try {
-    axios.post(`https://graph.facebook.com/v2.6/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-async function handleMessage(senderPsid: any, receivedMessage: any) {
-  const response = {
-    recipient: {
-      id: senderPsid,
-    },
-    message: {
-      text: `You sent the message: '${receivedMessage.text}'. Now send me an attachment!`,
-    },
-  };
-  
-  try {
-    axios.post(`https://graph.facebook.com/v2.6/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
+    axios.post(`https://graph.facebook.com/v13.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`, response)
   } catch (e) {
     console.error(e);
   }
