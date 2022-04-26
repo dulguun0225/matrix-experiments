@@ -46,7 +46,7 @@ appservice.on("query.user", (userId, createUser) => {
   // pass false to createUser, like so: createUser(false);
   console.log(`Received query for user ${userId}`);
   createUser({
-      display_name: "Test User",
+      display_name: "Test User " + userId,
       avatar_mxc: "mxc://localhost/somewhere",
   });
 });
