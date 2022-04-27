@@ -1,5 +1,5 @@
 import { PrismaClient, RoomFBID } from "@prisma/client";
-import { Appservice } from "matrix-bot-sdk";
+import { Appservice, Intent } from "matrix-bot-sdk";
 import axios from "axios";
 
 const prisma = new PrismaClient();
@@ -22,6 +22,34 @@ async function sendMessage(fbid: String, text: String) {
       `https://graph.facebook.com/v13.0/me/messages?access_token=${FB_PAGE_ACCESS_TOKEN}`,
       response
     );
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+interface ProfileInfo {
+  id: string;
+  name: string;
+  profile_pic?: string;
+  [x: string]: any;
+}
+
+async function getProfileInfo(fbid: String): Promise<ProfileInfo | undefined> {
+  try {
+    const res = await axios.get(
+      `https://graph.facebook.com/v13.0/${fbid}?fields=name,profile_pic&access_token=${FB_PAGE_ACCESS_TOKEN}`
+    );
+    return res.data;
+
+    /*
+      res.data:
+      {
+        "name": "Дөлгөөн Өө",
+        "profile_pic": "https://platform-lookaside.fbsbx.com/platform/profilepic/?psid=4747951328667401&width=1024&ext=1653637733&hash=AeTfkaKLRRJPtV9Iz2A",
+        "id": "4747951328667401"
+      }
+
+    */
   } catch (e) {
     console.error(e);
   }
@@ -81,11 +109,20 @@ export default function initFacebook(appservice: Appservice) {
 
         if (!roomFBID) {
           await intent.ensureRegistered();
-          intent.underlyingClient.setDisplayName("FB: " + fbid);
+          const profile: ProfileInfo = (await getProfileInfo(fbid)) || {
+            id: fbid,
+            name: "FB: " + fbid,
+          };
+          intent.underlyingClient.setDisplayName(profile.name);
+
+          if (profile.profile_pic) {
+            const mxcUri = await intent.underlyingClient.uploadContentFromUrl(profile.profile_pic);
+            intent.underlyingClient.setAvatarUrl(mxcUri);
+          }
 
           roomId = await intent.underlyingClient.createRoom({
             invite: [erxesWebhookUser],
-            name: "FB: " + fbid,
+            name: profile.name,
             is_direct: true,
             preset: "private_chat",
           });
@@ -98,6 +135,7 @@ export default function initFacebook(appservice: Appservice) {
           });
         } else {
           roomId = roomFBID.roomId;
+          intent.underlyingClient.inviteUser(erxesWebhookUser, roomFBID.roomId);
         }
 
         intent.sendText(roomId, webhook_event.message.text);
@@ -114,19 +152,19 @@ export default function initFacebook(appservice: Appservice) {
   appservice.on("room.message", async (roomId, event) => {
     if (!event["content"]) return;
     if (event["content"]["msgtype"] !== "m.text") return;
-  
+
     if (event.sender !== erxesWebhookUser) {
       return;
     }
-  
+
     const roomFBID = await prisma.roomFBID.findUnique({
       where: {
-        roomId
-      }
+        roomId,
+      },
     });
-  
-    if(!roomFBID) throw new Error("No room to fbid relation found");
-  
+
+    if (!roomFBID) throw new Error("No room to fbid relation found");
+
     sendMessage(roomFBID.fbid, event.content.body);
   });
 }
